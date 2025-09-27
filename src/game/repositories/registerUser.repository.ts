@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 export interface RegisteredUser {
     id: string;
     nickname: string;
@@ -13,7 +15,7 @@ export class InMemoryRegisterUserRepository implements IRegisterUserRepository {
     private usersByNickname = new Map<string, RegisteredUser>();
 
     async create(nickname: string): Promise<RegisteredUser> {
-        const id = crypto.randomUUID();
+        const id = randomUUID();
         const user: RegisteredUser = { id, nickname, createdAt: new Date() };
         this.usersByNickname.set(nickname.toLowerCase(), user);
         return user;

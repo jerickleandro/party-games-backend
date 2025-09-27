@@ -1,5 +1,5 @@
 import type { ICreateRoomRepository, Room } from "../repositories/createRoom.repository.ts";
-import crypto from "node:crypto";
+import { randomInt } from "node:crypto";
 
 export class CreateRoomService {
     constructor(private readonly repo: ICreateRoomRepository) { }
@@ -21,7 +21,7 @@ export class CreateRoomService {
 
     private async generateUniqueCode(): Promise<string> {
         for (let i = 0; i < 5000; i++) {
-            const n = crypto.randomInt(0, 1_000_000);
+            const n = randomInt(0, 1_000_000);
             const code = String(n).padStart(6, "0");
             if (!(await this.repo.existsByCode(code))) {
                 return code;
