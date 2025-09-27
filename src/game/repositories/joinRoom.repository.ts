@@ -5,15 +5,17 @@ export interface RoomMembership {
 }
 
 export interface IJoinRoomRepository {
-  addMember(roomId: string, userId: string): Promise<RoomMembership>; // idempotente
+  addMember(roomId: string, userId: string): Promise<RoomMembership>;
   isMember(roomId: string, userId: string): Promise<boolean>;
   listMembers(roomId: string): Promise<RoomMembership[]>;
-  getRoomIdForUser(userId: string): Promise<string | null>; // NOVO
+  getRoomIdForUser(userId: string): Promise<string | null>;
+  removeMember(roomId: string, userId: string): Promise<boolean>;
+  clearRoom(roomId: string): Promise<number>;
 }
 
 export class InMemoryJoinRoomRepository implements IJoinRoomRepository {
-  private membersByRoom = new Map<string, Map<string, RoomMembership>>(); // roomId -> (userId -> membership)
-  private roomByUser = new Map<string, string>(); // userId -> roomId (para garantir uma sala por usuário)
+  private membersByRoom = new Map<string, Map<string, RoomMembership>>();
+  private roomByUser = new Map<string, string>();
 
   async addMember(roomId: string, userId: string): Promise<RoomMembership> {
     let roomMap = this.membersByRoom.get(roomId);
@@ -41,5 +43,29 @@ export class InMemoryJoinRoomRepository implements IJoinRoomRepository {
 
   async getRoomIdForUser(userId: string): Promise<string | null> {
     return this.roomByUser.get(userId) ?? null;
+  }
+
+  async removeMember(roomId: string, userId: string): Promise<boolean> {
+    const roomMap = this.membersByRoom.get(roomId);
+    if (!roomMap) return false;
+    const existed = roomMap.delete(userId);
+    if (existed) {
+      // se o índice reverso apontava para esta sala, remova-o
+      if (this.roomByUser.get(userId) === roomId) this.roomByUser.delete(userId);
+      if (roomMap.size === 0) this.membersByRoom.delete(roomId);
+    }
+    return existed;
+  }
+
+  async clearRoom(roomId: string): Promise<number> {
+    const roomMap = this.membersByRoom.get(roomId);
+    if (!roomMap) return 0;
+    // limpar índice reverso
+    for (const userId of roomMap.keys()) {
+      if (this.roomByUser.get(userId) === roomId) this.roomByUser.delete(userId);
+    }
+    const removed = roomMap.size;
+    this.membersByRoom.delete(roomId);
+    return removed;
   }
 }
