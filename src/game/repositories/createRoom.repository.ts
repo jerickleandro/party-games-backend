@@ -1,6 +1,9 @@
+// src/game/repositories/createRoom.repository.ts
+import { randomUUID } from "node:crypto";
+
 export interface Room {
     id: string;
-    code: string;
+    code: string; // 6 dígitos
     createdAt: Date;
     identification?: string | null;
 }
@@ -8,14 +11,15 @@ export interface Room {
 export interface ICreateRoomRepository {
     create(data: { code: string; identification?: string | null }): Promise<Room>;
     existsByCode(code: string): Promise<boolean>;
+    findByCode(code: string): Promise<Room | null>;
 }
 
 export class InMemoryCreateRoomRepository implements ICreateRoomRepository {
     private roomsById = new Map<string, Room>();
-    private codes = new Set<string>();
+    private codeToRoomId = new Map<string, string>();
 
     async create(data: { code: string; identification?: string | null }): Promise<Room> {
-        const id = crypto.randomUUID();
+        const id = randomUUID();
         const room: Room = {
             id,
             code: data.code,
@@ -23,11 +27,16 @@ export class InMemoryCreateRoomRepository implements ICreateRoomRepository {
             identification: data.identification ?? null,
         };
         this.roomsById.set(id, room);
-        this.codes.add(room.code);
+        this.codeToRoomId.set(room.code, id);
         return room;
     }
 
     async existsByCode(code: string): Promise<boolean> {
-        return this.codes.has(code);
+        return this.codeToRoomId.has(code);
+    }
+
+    async findByCode(code: string): Promise<Room | null> {
+        const id = this.codeToRoomId.get(code);
+        return id ? this.roomsById.get(id) ?? null : null;
     }
 }
